@@ -3,6 +3,8 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from urllib.parse import urlparse, parse_qs
 import os
 import time
+from pytube import YouTube
+import yt_dlp
 
 def extract_video_id(url):
     """从YouTube URL中提取视频ID"""
@@ -20,8 +22,35 @@ def extract_video_id(url):
         return None
 
 def get_video_title(video_id):
-    """获取视频标题（简化版，仅使用视频ID）"""
-    return f"video_{video_id}"
+    """使用yt-dlp获取视频标题"""
+    try:
+        url = f"https://www.youtube.com/watch?v={video_id}"
+        
+        # 配置yt-dlp
+        ydl_opts = {
+            'quiet': True,  # 不显示下载进度
+            'no_warnings': True,  # 不显示警告
+        }
+        
+        # 获取视频信息
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            title = info.get('title', f"video_{video_id}")
+        
+        # 替换Windows文件系统不允许的字符
+        invalid_chars = '<>:"/\\|?*'
+        for char in invalid_chars:
+            title = title.replace(char, '_')
+        
+        # 限制文件名长度
+        if len(title) > 100:
+            title = title[:100]
+            
+        print(f"成功获取标题: {title}")
+        return title
+    except Exception as e:
+        print(f"获取视频标题失败: {str(e)}")
+        return f"video_{video_id}"  # 如果获取失败，返回默认标题
 
 def get_bilingual_subtitles(video_id):
     """获取双语字幕"""
@@ -142,6 +171,10 @@ def main():
                 print("无效的YouTube URL，跳过...")
                 continue
 
+            # 获取视频标题
+            video_title = get_video_title(video_id)
+            print(f"视频标题: {video_title}")
+
             # 获取字幕
             result = get_bilingual_subtitles(video_id)
             if not result:
@@ -152,7 +185,7 @@ def main():
             
             # 格式化并保存字幕
             output_text = format_subtitles(en_subs, zh_subs)
-            output_file = os.path.join(output_dir, f"{get_video_title(video_id)}.txt")
+            output_file = os.path.join(output_dir, f"{video_title}.txt")  # 使用视频标题作为文件名
             
             try:
                 with open(output_file, 'w', encoding='utf-8') as f:
