@@ -104,7 +104,7 @@ def get_bilingual_subtitles(video_id):
         return None
 
 def format_subtitles(en_subs, zh_subs):
-    """格式化字幕输出"""
+    """格式化字幕输出，中文在前，英文在后，一一对应"""
     formatted_text = "=== 双语字幕 ===\n\n"
     
     # 创建时间戳到字幕的映射
@@ -115,15 +115,18 @@ def format_subtitles(en_subs, zh_subs):
     all_timestamps = sorted(set(en_dict.keys()) | set(zh_dict.keys()))
     
     for timestamp in all_timestamps:
+        # 获取对应时间点的字幕
+        en_sub = en_dict.get(timestamp, {'text': '[未找到对应英文]', 'duration': 0})
+        zh_sub = zh_dict.get(timestamp, {'text': '[未找到对应中文]', 'duration': 0})
+        
+        # 清理文本，去除多余空格
+        en_text = en_sub['text'].strip()
+        zh_text = zh_sub['text'].strip()
+        
+        # 添加时间戳和字幕
         formatted_text += f"[{format_time(timestamp)}]\n"
-        
-        # 获取最接近的英文字幕
-        en_sub = en_dict.get(timestamp, {'text': '[未找到对应英文]'})
-        # 获取最接近的中文字幕
-        zh_sub = zh_dict.get(timestamp, {'text': '[未找到对应中文]'})
-        
-        formatted_text += f"EN: {en_sub['text']}\n"
-        formatted_text += f"中文: {zh_sub['text']}\n\n"
+        formatted_text += f"中文: {zh_text}\n"
+        formatted_text += f"EN: {en_text}\n\n"
     
     return formatted_text
 
